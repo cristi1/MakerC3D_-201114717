@@ -23,20 +23,93 @@ action code
 :}
 
 terminal String ID, ENTERO, DECIMAL;
-terminal TokenC3D MAS, MENOS, MULT, DIV, POT, PAR_IZQ, PAR_DER;
-nonterminal NodoC3D inicial, expresion;
+terminal TokenC3D MAS, MENOS, MULT, DIV, POT, PAR_IZQ, PAR_DER, IGUAL, DIFERENTE, MAYOR, MENOR, MAYOR_IG, MENOR_IG, AND, OR, NOT;
+nonterminal NodoC3D inicial, expresion, condicional, relacional;
+nonterminal String oprel;
 
+precedence left OR;
+precedence left AND;
+precedence left NOT;
+precedence left MAYOR, MENOR, MAYOR_IG, MENOR_IG, IGUAL, DIFERENTE;
 precedence left MAS, MENOS;
 precedence left MULT, DIV; 
 precedence right POT; 
 
 start with inicial;
 
-inicial     ::= {: ControlC3D.reiniciar(); :} expresion:exp 
+inicial     ::= {: ControlC3D.reiniciar(); :} condicional:exp 
                     {: 
                         RESULT = exp;
-                        ControlC3D.agregarC3D("//Último valor: " + exp.getCad());
+                        ControlC3D.agregarC3D("ultimo valor: " + exp.getCad());
                     :};
+
+condicional   ::= condicional:izq AND condicional:der
+                    {:
+                        String temp = ControlC3D.generaTemp();
+                        String c3d = temp + " = " + izq.getCad() + " && " + der.getCad() + ";\n";
+                        ControlC3D.agregarC3D(c3d);
+                        RESULT = new NodoC3D(temp); 
+                    :}
+              |   condicional:izq OR condicional:der
+                    {:
+                        String temp = ControlC3D.generaTemp();
+                        String c3d = temp + " = " + izq.getCad() + " || " + der.getCad() + ";\n";
+                        ControlC3D.agregarC3D(c3d);
+                        RESULT = new NodoC3D(temp); 
+                    :}
+              |   NOT condicional:unico
+                    {:
+                        String temp = ControlC3D.generaTemp();
+                        String c3d = temp + " = " + "NOT " + unico.getCad() + ";\n";
+                        ControlC3D.agregarC3D(c3d);
+                        RESULT = new NodoC3D(temp); 
+                    :}
+              |   relacional:unico
+                    {:
+                        String temp = unico.getCad();
+                        RESULT = new NodoC3D(temp);
+                    :}
+              ;
+
+relacional   ::= expresion:izq oprel:op expresion:der
+                    {:
+                        String temp = ControlC3D.generaTemp();
+                        String c3d = temp + " = " + izq.getCad() + " " + op + " " + der.getCad() + ";\n";
+                        ControlC3D.agregarC3D(c3d);
+                        RESULT = new NodoC3D(temp);
+                    :}
+             | expresion:unico
+                    {:
+                        String temp = unico.getCad();
+                        RESULT = new NodoC3D(temp);
+                    :}
+             ;
+
+oprel   ::= IGUAL
+                {:
+                    RESULT = "==";
+                :}
+        |   DIFERENTE
+                {:
+                    RESULT = "!=";
+                :}
+        |   MAYOR
+                {:
+                    RESULT = ">";
+                :}
+        |   MENOR
+                {:
+                    RESULT = "<";
+                :}
+        |   MAYOR_IG
+                {:
+                    RESULT = ">=";
+                :}
+        |   MENOR_IG 
+                {:
+                    RESULT = "<=";
+                :}
+        ;
 
 expresion   ::= expresion:izq MAS expresion:der
                     {: 
